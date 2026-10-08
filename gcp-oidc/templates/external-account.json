@@ -1,0 +1,13 @@
+{
+  "type": "external_account",
+  "audience": "{{AUDIENCE}}",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+  "token_url": "https://sts.googleapis.com/v1/token",
+  {{IMPERSONATION_LINE}}
+  "credential_source": {
+    "executable": {
+      "command": "{{HELPER}}",
+      "timeout_millis": 30000
+    }
+  }
+}
