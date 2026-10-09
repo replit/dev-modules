@@ -28,10 +28,12 @@ oidc_render "${MODULE_DIR}/templates/external-account.json" AUDIENCE HELPER IMPE
   | sed '/^  $/d' | oidc_write_file "$CRED" 0600
 
 if command -v gcloud >/dev/null 2>&1; then
-  gcloud config set auth/credential_file_override "$CRED" --quiet >/dev/null \
+  # Write properties without loading the active account's credential; gcloud
+  # would otherwise try to use the file registered above, which fails or mints.
+  CLOUDSDK_AUTH_DISABLE_CREDENTIALS=true gcloud config set auth/credential_file_override "$CRED" --quiet >/dev/null \
     || oidc_die "gcloud credential registration failed"
   if [[ -n "$OPT_project" ]]; then
-    gcloud config set project "$OPT_project" --quiet >/dev/null \
+    CLOUDSDK_AUTH_DISABLE_CREDENTIALS=true gcloud config set project "$OPT_project" --quiet >/dev/null \
       || oidc_die "gcloud project selection failed"
   fi
 else
