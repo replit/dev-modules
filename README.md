@@ -11,6 +11,7 @@ A collection of prebuilt modules for developing software with Replit.
 | [`azure-oidc`](./azure-oidc/README.md) | Sets up the Azure CLI and SDKs with short-lived Microsoft Entra credentials |
 | [`vault-oidc`](./vault-oidc/README.md) | Sets up the HashiCorp Vault CLI with short-lived Vault tokens |
 | [`infisical-oidc`](./infisical-oidc/README.md) | Sets up the Infisical CLI with short-lived Infisical access tokens |
+| [`jfrog-oidc`](./jfrog-oidc/README.md) | Sets up npm with short-lived JFrog tokens for Artifactory packages |
 
 Each module's README covers its usage and options.
 
