@@ -1,8 +1,8 @@
 # `jfrog-oidc`
 
-Installs an npm wrapper that uses Replit workload identity to obtain short-lived
-JFrog tokens for an Artifactory npm repository. It does not require JFrog CLI or
-a stored JFrog password/API key.
+Installs a JFrog CLI (`jf`) wrapper that uses Replit workload identity to obtain
+short-lived JFrog access tokens, without a stored JFrog password/API key.
+Also provides a token helper for direct API access.
 
 ## JFrog setup
 
@@ -28,7 +28,7 @@ Replit publishes discovery at
 subject format. Do not bind the mapping to a full sandbox-specific subject if
 new sandboxes should inherit access.
 
-The sandbox must be able to reach the JFrog platform and registry, and JFrog
+The sandbox must be able to reach the JFrog platform, and JFrog
 must be able to verify Replit's signing keys. Authentication cannot fix a
 private-network routing problem. Verify generic OIDC availability against your
 JFrog deployment and version; the public integration guide does not establish
@@ -36,24 +36,25 @@ a minimum version for this flow.
 
 ## Usage
 
-Use an environment with Node.js/npm already installed. Setup installs missing
-`jq` and `curl` by default, using the shared system-package installer; it
-requires root or passwordless sudo when packages are missing. On NixOS, install
-those tools in the environment first. Use `--disable-deps-install` to manage
-them yourself. The Replit identity CLI is platform-provided.
+Setup reuses an existing JFrog CLI or installs a pinned release when missing.
+It installs missing `jq` and `curl` through the shared system-package installer,
+which requires root or passwordless sudo. Use `--cli-release` to select a
+specific JFrog CLI version, or `--disable-deps-install` to manage tools yourself.
+The CLI must support `jf config add --access-token-stdin`; the default release
+is 2.128.0. The Replit identity CLI is platform-provided.
 
 ```bash
 bash ./dev-modules/jfrog-oidc/build.sh \
   --platform-url=https://example.jfrog.io \
   --provider-name=replit \
-  --audience=jfrog-replit \
-  --registry=https://example.jfrog.io/artifactory/api/npm/npm-virtual/
+  --audience=jfrog-replit
 
 source ~/.config/replit-oidc/env.sh
-npm ci
+jf rt ping
+jf rt download 'my-repository/path/to/artifact' ./downloads/
 ```
 
-Source `env.sh` explicitly before an install in a noninteractive build step.
+Source `env.sh` explicitly before using `jf` in a noninteractive build step.
 Opening a new interactive shell also activates the wrapper.
 
 | Flag | Required | Description |
@@ -61,59 +62,57 @@ Opening a new interactive shell also activates the wrapper.
 | `--platform-url` | yes | HTTPS platform origin, without `/artifactory` |
 | `--provider-name` | yes | Name of the configured JFrog OIDC integration |
 | `--audience` | yes | Audience configured for the integration |
-| `--registry` | yes | Full HTTPS npm repository URL |
-| `--scope` | no | Route only this npm scope, such as `@myorg`; otherwise set the default registry |
 | `--project-key` | no | JFrog project key when selecting project-scoped identity mappings |
-| `--disable-deps-install` | no | Skip installing `jq` and `curl`; default `false` |
+| `--cli-release` | no | JFrog CLI version to install; default `2.128.0` when missing |
+| `--disable-deps-install` | no | Skip installing JFrog CLI, `jq`, and `curl`; default `false` |
 
-`--cli-release` is not applicable: the module uses the environment's npm.
 One JFrog configuration is supported per OIDC state directory. Set
 `REPLIT_OIDC_STATE_DIR` before setup to use a different state directory.
 
-## How it works
+### Package-manager commands
 
-Setup writes a token helper and an `npm` wrapper under
-`~/.config/replit-oidc/bin/`. It adds a marked block to the user npm config
-(`NPM_CONFIG_USERCONFIG`, otherwise `~/.npmrc`), preserving unrelated settings.
-The block contains a repository-scoped `_authToken=${REPLIT_JFROG_TOKEN}`
-reference, not a token.
-
-Setup does not mint credentials. On npm use, the helper mints a Replit identity
-token and exchanges it at `/access/api/v1/oidc/token` with the configured
-provider name. It caches the resulting JFrog token and expiration in a private
-file, refreshing when fewer than 60 seconds remain. The wrapper supplies the
-token only to the child npm process. Version and help commands run without
-authentication. Exchange failures stop npm rather than falling back to another
-identity. Re-running setup invalidates the cached credentials.
-
-Refresh happens before starting npm, not during an ongoing install. Configure
-the JFrog mapping's token lifetime to cover the expected command duration.
-Project `.npmrc` settings take precedence over user settings, and lockfiles may
-pin a different registry URL. Match the configured URL to the actual registry
-paths used by the project; no project config, source, or lockfile is rewritten.
-npm may reuse registry credentials for other paths on the same host; the
-configuration path is not an authorization boundary. Enforce repository access
-in the JFrog identity mapping and permissions.
-The wrapper covers `npm` invocations through the activated PATH, not absolute
-npm paths or other package managers.
-
-## Local validation
-
-With Python 3, OpenSSL, Node.js/npm, `jq`, and `curl` on PATH:
+Use JFrog's per-tool configuration to select repositories, then run commands
+through `jf`. For example, with Node.js/npm already installed:
 
 ```bash
-python3 jfrog-oidc/tests/integration.py
+jf npm-config --server-id-resolve=replit-oidc --repo-resolve=npm-virtual
+jf npm ci
 ```
 
-This runs real npm against a local HTTPS token-exchange and package-registry
-fixture, with a fake Replit identity command. It checks a lockfile-based private
-package install, lazy authentication, token caching and refresh, safe failures,
-cross-host credential scoping, file permissions, repeat setup, and wrapper
-priority. It does not verify a live JFrog deployment's trust configuration.
+The same authenticated CLI supports `jf pip`, `jf mvn`, `jf docker`, and other
+[JFrog build-tool commands](https://docs.jfrog.com/artifactory/docs/build-tool-commands).
+Install the corresponding native tools and configure their repositories as
+JFrog requires. Bare `npm`, `pip`, Maven, and Docker commands do not use this
+wrapper's authentication automatically.
+
+### Direct API access
+
+`jfrog-token` prints a valid access token to stdout. Capture its output privately
+for clients that accept Bearer tokens; do not print it in shared terminals or
+logs. The helper uses the same token cache as the CLI wrapper.
+
+## How it works
+
+Setup writes `jfrog-token` and `jf` under `~/.config/replit-oidc/bin/` without
+minting credentials. Before a CLI command, the helper exchanges a Replit
+identity token at `/access/api/v1/oidc/token` with the configured provider name.
+It caches the JFrog token and expiration in a private file, refreshing when
+fewer than 60 seconds remain.
+
+The wrapper passes the token through stdin to `jf config add`, using server ID
+`replit-oidc` in a private, module-owned CLI home under
+`~/.config/replit-oidc/jfrog/cli/`. The normal `~/.jfrog` configuration is
+unchanged. The CLI home is selected only for wrapped commands.
+
+Version and top-level help commands run without authentication. Exchange or
+configuration failures stop the command. Re-running setup invalidates the
+cached token. Refresh happens before commands, not during an ongoing operation;
+configure the identity mapping's token lifetime to cover the expected duration.
+Access to JFrog services and repositories follows the identity mapping's
+permissions.
 
 ## References
 
 - [JFrog OIDC integration and identity mappings](https://docs.jfrog.com/administration/docs/openid-connect-integration)
 - [JFrog OIDC token exchange API](https://docs.jfrog.com/administration/reference/oidctokenexchange)
-- [Artifactory npm repositories](https://docs.jfrog.com/artifactory/docs/npm-repositories)
-- [npm user configuration and authentication scope](https://docs.npmjs.com/cli/v11/configuring-npm/npmrc)
+- [JFrog CLI authentication](https://docs.jfrog.com/integrations/docs/authenticating-via-the-cli)
