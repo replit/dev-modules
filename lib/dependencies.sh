@@ -137,6 +137,10 @@ oidc_cli_install() (
       tar -xzf "$work/infisical.tar.gz" -C "$work"
       install -Dm755 "$work/infisical" "$destination/bin/infisical"
       ;;
+    jf)
+      oidc_download "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/${release}/jfrog-cli-linux-${go_arch}/jf" "$work/jf"
+      install -Dm755 "$work/jf" "$destination/bin/jf"
+      ;;
   esac
 )
 
@@ -178,7 +182,7 @@ oidc_dependencies() {
   export PATH="$destination/bin:$PATH"
   oidc_env_prepend_path "$destination/bin"
   # Other modules may already have installed wrappers that must remain first.
-  if [[ -x "$OIDC_BIN_DIR/az" || -x "$OIDC_BIN_DIR/infisical" ]]; then
+  if [[ -x "$OIDC_BIN_DIR/az" || -x "$OIDC_BIN_DIR/infisical" || -x "$OIDC_BIN_DIR/jf" ]]; then
     oidc_env_prepend_path "$OIDC_BIN_DIR"
   fi
 }
