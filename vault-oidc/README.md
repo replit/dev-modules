@@ -16,6 +16,11 @@ and cached in `~/.vault-token`.
 
 ## Usage
 
+**Development sandboxes only.** This module configures authentication for tools
+and apps running inside a Replit development sandbox. It does not configure
+authentication for published apps. Successful authentication in the sandbox
+does not verify authentication in a published app.
+
 Setup installs missing `jq`, `curl`, and the Vault CLI by default, reusing
 existing tools. Use `--cli-release=2.1.2` to select an exact release (also the
 default for a missing CLI), or `--disable-deps-install` to manage all tools

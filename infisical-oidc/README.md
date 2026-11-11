@@ -17,6 +17,11 @@ minting tokens. The access token is cached there when the CLI is used.
 
 ## Usage
 
+**Development sandboxes only.** This module configures authentication for tools
+and apps running inside a Replit development sandbox. It does not configure
+authentication for published apps. Successful authentication in the sandbox
+does not verify authentication in a published app.
+
 Setup installs missing `jq`, `curl`, and the Infisical CLI by default, reusing
 existing tools. Use `--cli-release=0.43.139` to select an exact release (also
 the default for a missing CLI), or `--disable-deps-install` to manage all

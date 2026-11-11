@@ -6,6 +6,11 @@ Also provides a token helper for direct API access.
 
 ## JFrog setup
 
+**Development sandboxes only.** This module configures authentication for tools
+and apps running inside a Replit development sandbox. It does not configure
+authentication for published apps. Successful authentication in the sandbox
+does not verify authentication in a published app.
+
 JFrog documents OIDC integration as requiring an **Enterprise X** or
 **Enterprise+** license. A JFrog administrator must configure the trust
 relationship before using this module:
