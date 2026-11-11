@@ -1,6 +1,11 @@
 # Replit Dev Modules
 
-A collection of prebuilt modules for developing software with Replit.
+Prebuilt modules for authenticating Replit development sandboxes to external
+services using workload identity federation (WIF) and OpenID Connect (OIDC).
+
+These modules are for development sandboxes only. They do not provide
+authentication for published apps, including Autoscale, Reserved VM, and
+Scheduled Deployments.
 
 ## Modules
 
@@ -17,10 +22,12 @@ Each module's README covers its usage and options.
 
 ## How OIDC works
 
-Replit fully supports workload identity federation. Replit is an OpenID Connect
-(OIDC) identity provider, so any service that accepts external OIDC tokens can
-trust Replit workloads directly, with no long-lived credentials to store or
-rotate.
+Replit development sandboxes support workload identity federation. Replit is an
+OpenID Connect (OIDC) identity provider, so external services can trust tokens
+issued to a development sandbox without requiring long-lived credentials.
+
+This authentication setup does not carry over when you publish an app. Configure
+the published app's authentication separately using production app secrets.
 
 Mint a short-lived token for an audience:
 
